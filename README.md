@@ -2,6 +2,10 @@
 
 This package hardcodes files in UTF-8 format into JavaScript modules that can be imported.
 
+## Install
+
+    npm i hardcode
+
 ## CLI
 
 The package comes with a built-in CLI for build scripts:
