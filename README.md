@@ -41,7 +41,7 @@ hardcode('templates/dev/**', {
 At some point later on, you can access the contents of `hello.pug` by importing it:
 
 ```javascript
-const helloPug = require('templates/prod/hello.pug')
+const helloPug = require('./templates/prod/hello.pug')
 
 console.log(helloPug.val) // the contents of hello.pug
 ```
