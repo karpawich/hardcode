@@ -27,8 +27,8 @@ Add `hardcode <glob>` to your build script. For example:
 Imagine that you have the following project structure:
 ```
 templates/
-	dev/
-		hello.pug
+ dev/
+  hello.pug
 ```
 
 The following code will hardcode `hello.pug` for you:
