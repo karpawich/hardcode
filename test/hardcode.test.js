@@ -22,14 +22,14 @@ test('expect it to work, damn it!', () => {
 						return;
 					}
 
-					expect(JSON.parse(data).data).toBe('Hello, World!');
+					expect(data.toString()).toBe('module.exports = {val: "Hello, World!"};');
 					readFile(paths[1], (err, data) => {
 						if (err) {
 							reject(err);
 							return;
 						}
 
-						expect(JSON.parse(data).data).toBe('Foo\r\nBar');
+						expect(data.toString()).toBe('module.exports = {val: "Foo Bar"};');
 						resolve();
 					});
 				});
