@@ -32,7 +32,8 @@ The following code will hardcode `hello.pug` for you:
 ```javascript
 const hardcode = require('hardcode');
 
-hardcode('templates/dev/**', {
+hardcode({
+	pattern: 'templates/dev/**',
 	prefix: 'templates/dev/',
 	out: 'templates/prod/'
 });
