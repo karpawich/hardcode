@@ -3,7 +3,7 @@ const {join, dirname} = require('path');
 const glob = require('glob');
 
 function _forEach(contents, match, out) {
-	const path = `${join(out, match)}.json`;
+	const path = `${join(out, match)}.js`;
 	return new Promise((resolve, reject) => {
 		mkdir(dirname(path), {recursive: true}, err => {
 			if (err) {
@@ -11,7 +11,7 @@ function _forEach(contents, match, out) {
 				return;
 			}
 
-			writeFile(path,	`{"data":${JSON.stringify(contents.toString())}}`, err => {
+			writeFile(path,	`module.exports = {val: ${JSON.stringify(contents.toString())}};`, err => {
 				if (err) {
 					reject(err);
 					return;
