@@ -1,6 +1,6 @@
 {
   "name": "hardcode",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Hardcodes files in UTF-8 format into JS modules for import",
   "main": "hardcode.js",
   "scripts": {
