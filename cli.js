@@ -7,8 +7,8 @@ const options = {};
 
 program
 	.version('1.0.1')
-	.arguments('<pattern>')
-	.description('the glob pattern for matching files to build')
+	.arguments('<glob>')
+	.description('<glob> = the glob pattern for matching files to build')
 	.action(pattern => {
 		options.pattern = pattern;
 	})
