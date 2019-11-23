@@ -3,36 +3,84 @@
 const {readFile} = require('fs');
 const hardcode = require('../hardcode');
 
-test('expect it to work, damn it!', () => {
+let paths;
+
+beforeAll(() => {
 	return new Promise((resolve, reject) => {
-		return hardcode({
+		hardcode({
 			pattern: './test/src/**',
 			prefix: './test/src',
-			out: './test/build'
+			out: './test/import'
 		})
-			.then(paths => {
-				expect(paths).toBeDefined();
-				expect(paths.length).toBe(2);
-				expect(typeof paths[0]).toBe('string');
-				expect(typeof paths[1]).toBe('string');
+			.then($paths => {
+				paths = $paths;
+				resolve();
+			})
+			.catch(reject);
+	});
+});
 
-				readFile(paths[0], (err, data) => {
+test('basic', () => {
+	expect(paths).toBeDefined();
+	expect(paths.length).toBe(2);
+	expect(typeof paths[0]).toBe('string');
+	expect(typeof paths[1]).toBe('string');
+});
+
+test('virtual files', () => {
+	return new Promise((resolve, reject) => {
+		readFile(paths[0], (err, data) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+
+			expect(data.toString()).toBe('module.exports = "Hello, World!";');
+			readFile(paths[1], (err, data) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+
+				expect(data.toString()).toBe('module.exports = "Foo Bar";');
+				resolve();
+			});
+		});
+	});
+});
+
+test('index file generation', () => {
+	return new Promise((resolve, reject) => {
+		readFile('test/import/index.js', (err, data) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+
+			readFile('test/index.js.test.1', (err, actualData) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+
+				expect(data.toString()).toBe(actualData.toString());
+				readFile('test/import/folder/index.js', (err, data) => {
 					if (err) {
 						reject(err);
 						return;
 					}
 
-					expect(data.toString()).toBe('module.exports = {val: "Hello, World!"};');
-					readFile(paths[1], (err, data) => {
+					readFile('test/index.js.test.2', (err, actualData) => {
 						if (err) {
 							reject(err);
 							return;
 						}
 
-						expect(data.toString()).toBe('module.exports = {val: "Foo Bar"};');
+						expect(data.toString()).toBe(actualData.toString());
 						resolve();
 					});
 				});
 			});
+		});
 	});
 });

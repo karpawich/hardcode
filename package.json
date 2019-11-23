@@ -1,6 +1,6 @@
 {
   "name": "hardcode",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Assembles a virtual, `import`-able file system from disk.",
   "main": "hardcode.js",
   "scripts": {

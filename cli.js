@@ -6,7 +6,7 @@ const hardcode = require('./hardcode');
 const options = {};
 
 program
-	.version('1.2.2')
+	.version('1.2.3')
 	.arguments('<glob>')
 	.description('<glob> = the glob pattern for matching files to build')
 	.action(pattern => {
