@@ -3,7 +3,7 @@ const {join, dirname, basename} = require('path');
 const glob = require('glob');
 
 function _forEach(contents, match, out) {
-	const path = `${join(out, 'files', match)}.js`;
+	const path = `${join(out, match)}.js`;
 	return new Promise((resolve, reject) => {
 		mkdir(dirname(path), {recursive: true}, err => {
 			if (err) {
