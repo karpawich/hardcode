@@ -29,8 +29,8 @@ Add `hardcode <glob>` to your build script. For example:
 templates/
  dev/
   email.html
-		res/
-			style.css
+   res/
+    style.css
 ```
 
 2. Now, run `hardcode` on the `templates/dev` directory.
