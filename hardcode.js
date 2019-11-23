@@ -1,9 +1,9 @@
-const {readFile, writeFile, lstat, mkdir} = require('fs');
-const {join, dirname} = require('path');
+const {readFile, writeFile, lstat, mkdir, readdir, unlink} = require('fs');
+const {join, dirname, basename} = require('path');
 const glob = require('glob');
 
 function _forEach(contents, match, out) {
-	const path = `${join(out, match)}.js`;
+	const path = `${join(out, 'files', match)}.js`;
 	return new Promise((resolve, reject) => {
 		mkdir(dirname(path), {recursive: true}, err => {
 			if (err) {
@@ -11,7 +11,7 @@ function _forEach(contents, match, out) {
 				return;
 			}
 
-			writeFile(path,	`module.exports = {val: ${JSON.stringify(contents.toString())}};`, err => {
+			writeFile(path,	`module.exports = ${JSON.stringify(contents.toString())};`, err => {
 				if (err) {
 					reject(err);
 					return;
@@ -20,6 +20,87 @@ function _forEach(contents, match, out) {
 				resolve(path);
 			});
 		});
+	});
+}
+
+function _deleteIndex(dir) {
+	return new Promise((resolve, reject) => {
+		const path = join(dir, 'index.js');
+		lstat(path, (err, _) => {
+			if (err) {
+				if (err.code !== 'ENOENT') {
+					reject(err);
+					return;
+				}
+
+				resolve();
+			} else {
+				unlink(path, error => {
+					if (error) {
+						reject(error);
+						return;
+					}
+
+					resolve();
+				});
+			}
+		});
+	});
+}
+
+function _build(dir) {
+	return new Promise((resolve, reject) => {
+		_deleteIndex(dir)
+			.catch(reject)
+			.then(() => {
+				readdir(dir, (err, files) => {
+					if (err) {
+						reject(err);
+						return;
+					}
+
+					Promise.all(files.map(file => {
+						return new Promise((resolve, reject) => {
+							const path = join(dir, file);
+							lstat(path, (err, stats) => {
+								if (err) {
+									reject(err);
+									return;
+								}
+
+								if (stats.isDirectory()) {
+									_build(path)
+										.then(resolve)
+										.catch(reject);
+								} else {
+									resolve(file.slice(0, -3));
+								}
+							});
+						});
+					}))
+						.then(modules => {
+							let $imports = '';
+							let $exports = 'module.exports = {\n';
+							let i = 0;
+							for (const $module of modules) {
+								$imports += `const $${i} = require('./${$module}');\n`;
+								$exports += `\t'${$module}': $${i},\n`;
+								i++;
+							}
+
+							$imports += '\n';
+							$exports += '};\n';
+
+							writeFile(join(dir, 'index.js'), `${$imports}${$exports}`, error => {
+								if (error) {
+									reject(error);
+								}
+
+								resolve(basename(dir));
+							});
+						});
+				});
+			});
 	});
 }
 
@@ -70,11 +151,11 @@ function hardcode(options) {
 					});
 				});
 			}))
-				.then(directoryFlags => {
+				.then(dirFlags => {
 					let i = 0;
-					for (const directoryFlag of directoryFlags) {
+					for (const dirFlag of dirFlags) {
 						let match;
-						if (!directoryFlag) {
+						if (!dirFlag) {
 							match = matches[i];
 							promises.push(
 								new Promise((resolve, reject) => {
@@ -100,7 +181,13 @@ function hardcode(options) {
 					}
 
 					Promise.all(promises)
-						.then(paths => resolve(paths))
+						.then(paths => {
+							_build(options.out)
+								.then(() => {
+									resolve(paths);
+								})
+								.catch(reject);
+						})
 						.catch(reject);
 				})
 				.catch(reject);

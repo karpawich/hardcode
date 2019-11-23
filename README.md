@@ -1,6 +1,6 @@
 # hardcode
 
-This package hardcodes files in UTF-8 format into JavaScript modules that can be imported.
+`hardcode` assembles a virtual, `import`-able file system from disk.
 
 ## Install
 
@@ -24,14 +24,16 @@ Add `hardcode <glob>` to your build script. For example:
 
 ## Usage
 
-Imagine that you have the following project structure:
+1. Imagine that you have the following files on disk:
 ```
 templates/
  dev/
-  hello.pug
+  email.html
+		res/
+			style.css
 ```
 
-The following code will hardcode `hello.pug` for you:
+2. Now, run `hardcode` on the `templates/dev` directory.
 
 ```javascript
 const hardcode = require('hardcode');
@@ -39,16 +41,17 @@ const hardcode = require('hardcode');
 hardcode({
 	pattern: 'templates/dev/**',
 	prefix: 'templates/dev/',
-	out: 'templates/prod/'
+	out: 'templates/import/'
 });
 ```
 
-At some point later on, you can access the contents of `hello.pug` by importing it:
+3. Finally, import the `templates/dev` directory as a JSON object:
 
 ```javascript
-const helloPug = require('./templates/prod/hello.pug')
+const templates = require('./templates/import')
 
-console.log(helloPug.val) // the contents of hello.pug
+const html = templates['email.html'] // email.html file contents
+const css = templates['res']['style.css'] // style.css file contents
 ```
 
 ## License
