@@ -1,4 +1,4 @@
-const {readFile, writeFile, lstat, mkdir, readdir, unlink} = require('fs');
+const {readFile, writeFile, lstat, mkdir, readdir, rmdir, unlink} = require('fs');
 const {join, dirname, basename} = require('path');
 const glob = require('glob');
 
@@ -23,6 +23,46 @@ function _forEach(contents, match, out) {
 	});
 }
 
+function _deleteFiles(dir) {
+	return new Promise((resolve, reject) => {
+		readdir(dir, (err, files) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+
+			Promise.all(files.map(file =>
+				new Promise((resolve, reject) => {
+					const path = join(dir, file);
+					lstat(path, (err, stats) => {
+						if (err) {
+							reject(err);
+							return;
+						}
+
+						if (stats.isDirectory()) {
+							_deleteDirectory(path)
+								.catch(reject)
+								.then(resolve);
+						} else {
+							unlink(path, err => {
+								if (err) {
+									reject(err);
+									return;
+								}
+
+								resolve();
+							});
+						}
+					});
+				})
+			))
+				.catch(reject)
+				.then(resolve);
+		});
+	});
+}
+
 function _deleteDirectory(dir) {
 	return new Promise((resolve, reject) => {
 		lstat(dir, (err, _) => {
@@ -34,14 +74,18 @@ function _deleteDirectory(dir) {
 
 				resolve();
 			} else {
-				unlink(dir, error => {
-					if (error) {
-						reject(error);
-						return;
-					}
+				_deleteFiles(dir)
+					.catch(reject)
+					.then(() => {
+						rmdir(dir, err => {
+							if (err) {
+								reject(err);
+								return;
+							}
 
-					resolve();
-				});
+							resolve();
+						});
+					});
 			}
 		});
 	});
@@ -49,57 +93,53 @@ function _deleteDirectory(dir) {
 
 function _build(dir) {
 	return new Promise((resolve, reject) => {
-		_deleteDirectory(dir)
-			.catch(reject)
-			.then(() => {
-				readdir(dir, (err, files) => {
-					if (err) {
-						reject(err);
-						return;
+		readdir(dir, (err, files) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+
+			Promise.all(files.map(file => {
+				return new Promise((resolve, reject) => {
+					const path = join(dir, file);
+					lstat(path, (err, stats) => {
+						if (err) {
+							reject(err);
+							return;
+						}
+
+						if (stats.isDirectory()) {
+							_build(path)
+								.then(resolve)
+								.catch(reject);
+						} else {
+							resolve(file.slice(0, -3));
+						}
+					});
+				});
+			}))
+				.then(modules => {
+					let $imports = '';
+					let $exports = 'module.exports = {\n';
+					let i = 0;
+					for (const $module of modules) {
+						$imports += `const $${i} = require('./${$module}');\n`;
+						$exports += `\t'${$module}': $${i},\n`;
+						i++;
 					}
 
-					Promise.all(files.map(file => {
-						return new Promise((resolve, reject) => {
-							const path = join(dir, file);
-							lstat(path, (err, stats) => {
-								if (err) {
-									reject(err);
-									return;
-								}
+					$imports += '\n';
+					$exports += '};\n';
 
-								if (stats.isDirectory()) {
-									_build(path)
-										.then(resolve)
-										.catch(reject);
-								} else {
-									resolve(file.slice(0, -3));
-								}
-							});
-						});
-					}))
-						.then(modules => {
-							let $imports = '';
-							let $exports = 'module.exports = {\n';
-							let i = 0;
-							for (const $module of modules) {
-								$imports += `const $${i} = require('./${$module}');\n`;
-								$exports += `\t'${$module}': $${i},\n`;
-								i++;
-							}
+					writeFile(join(dir, 'index.js'), `${$imports}${$exports}`, error => {
+						if (error) {
+							reject(error);
+						}
 
-							$imports += '\n';
-							$exports += '};\n';
-
-							writeFile(join(dir, 'index.js'), `${$imports}${$exports}`, error => {
-								if (error) {
-									reject(error);
-								}
-
-								resolve(basename(dir));
-							});
-						});
+						resolve(basename(dir));
+					});
 				});
-			});
+		});
 	});
 }
 
@@ -138,58 +178,62 @@ function hardcode(options) {
 				return;
 			}
 
-			Promise.all(matches.map(match => {
-				return new Promise((resolve, reject) => {
-					lstat(match, (err, stats) => {
-						if (err) {
-							reject(err);
-							return;
-						}
+			_deleteDirectory(options.out)
+				.catch(reject)
+				.then(() => {
+					Promise.all(matches.map(match => {
+						return new Promise((resolve, reject) => {
+							lstat(match, (err, stats) => {
+								if (err) {
+									reject(err);
+									return;
+								}
 
-						resolve(stats.isDirectory());
-					});
-				});
-			}))
-				.then(dirFlags => {
-					let i = 0;
-					for (const dirFlag of dirFlags) {
-						let match;
-						if (!dirFlag) {
-							match = matches[i];
-							promises.push(
-								new Promise((resolve, reject) => {
-									readFile(match, (error, data) => {
-										if (error) {
-											reject(error);
-											return;
-										}
+								resolve(stats.isDirectory());
+							});
+						});
+					}))
+						.then(dirFlags => {
+							let i = 0;
+							for (const dirFlag of dirFlags) {
+								let match;
+								if (!dirFlag) {
+									match = matches[i];
+									promises.push(
+										new Promise((resolve, reject) => {
+											readFile(match, (error, data) => {
+												if (error) {
+													reject(error);
+													return;
+												}
 
-										if (match.startsWith(prefix)) {
-											match = match.slice(prefix.length);
-										}
+												if (match.startsWith(prefix)) {
+													match = match.slice(prefix.length);
+												}
 
-										forEach(data, match, options.out)
-											.then(resolve)
-											.catch(reject);
-									});
-								})
-							);
-						}
+												forEach(data, match, options.out)
+													.then(resolve)
+													.catch(reject);
+											});
+										})
+									);
+								}
 
-						i++;
-					}
+								i++;
+							}
 
-					Promise.all(promises)
-						.then(paths => {
-							_build(options.out)
-								.then(() => {
-									resolve(paths);
+							Promise.all(promises)
+								.then(paths => {
+									_build(options.out)
+										.then(() => {
+											resolve(paths);
+										})
+										.catch(reject);
 								})
 								.catch(reject);
 						})
 						.catch(reject);
-				})
-				.catch(reject);
+				});
 		});
 	});
 }
