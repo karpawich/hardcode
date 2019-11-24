@@ -23,10 +23,9 @@ function _forEach(contents, match, out) {
 	});
 }
 
-function _deleteIndex(dir) {
+function _deleteDirectory(dir) {
 	return new Promise((resolve, reject) => {
-		const path = join(dir, 'index.js');
-		lstat(path, (err, _) => {
+		lstat(dir, (err, _) => {
 			if (err) {
 				if (err.code !== 'ENOENT') {
 					reject(err);
@@ -35,7 +34,7 @@ function _deleteIndex(dir) {
 
 				resolve();
 			} else {
-				unlink(path, error => {
+				unlink(dir, error => {
 					if (error) {
 						reject(error);
 						return;
@@ -50,7 +49,7 @@ function _deleteIndex(dir) {
 
 function _build(dir) {
 	return new Promise((resolve, reject) => {
-		_deleteIndex(dir)
+		_deleteDirectory(dir)
 			.catch(reject)
 			.then(() => {
 				readdir(dir, (err, files) => {
